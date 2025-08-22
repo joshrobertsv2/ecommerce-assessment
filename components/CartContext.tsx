@@ -1,3 +1,7 @@
+// Removed the broken useEffect (it only ran once before). Totals now update automatically via useMemo.
+// cartItemCount and totalPrice are memoized based on cartItems.
+// Cleaner and optimized, no unnecessary recalculation every render.
+
 'use client';
 
 import React, {
@@ -6,6 +10,7 @@ import React, {
   useState,
   useEffect,
   ReactNode,
+  useMemo,
 } from 'react';
 import { Product } from '../lib/graphql';
 
@@ -26,7 +31,6 @@ const CartContext = createContext<CartContextType | undefined>(undefined);
 
 export function CartProvider({ children }: { children: ReactNode }) {
   const [cartItems, setCartItems] = useState<CartItem[]>([]);
-  const [cartTotal, setCartTotal] = useState(0);
 
   const addToCart = (product: Product) => {
     setCartItems((prevItems) => {
@@ -49,26 +53,17 @@ export function CartProvider({ children }: { children: ReactNode }) {
     );
   };
 
-  const clearCart = () => {
-    setCartItems([]);
-  };
+  const clearCart = () => setCartItems([]);
 
-  useEffect(() => {
-    const total = cartItems.reduce(
-      (sum, item) => sum + item.price * item.quantity,
-      0
-    );
-    setCartTotal(total);
-  }, []);
-
-  // Recalculating on every render
-  const cartItemCount = cartItems.reduce(
-    (total, item) => total + item.quantity,
-    0
+  // Memoized values to avoid recalculating on every render
+  const cartItemCount = useMemo(
+    () => cartItems.reduce((total, item) => total + item.quantity, 0),
+    [cartItems]
   );
-  const totalPrice = cartItems.reduce(
-    (total, item) => total + item.price * item.quantity,
-    0
+
+  const totalPrice = useMemo(
+    () => cartItems.reduce((total, item) => total + item.price * item.quantity, 0),
+    [cartItems]
   );
 
   return (
@@ -89,7 +84,7 @@ export function CartProvider({ children }: { children: ReactNode }) {
 
 export function useCart() {
   const context = useContext(CartContext);
-  if (context === undefined) {
+  if (!context) {
     throw new Error('useCart must be used within a CartProvider');
   }
   return context;
