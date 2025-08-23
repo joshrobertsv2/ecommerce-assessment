@@ -1,10 +1,16 @@
+/*
+- Fixed a critical bug where the cart total was not being recalculated when items changed; the `useEffect` dependency array was empty `[]` and is now correctly derived from `cartItems`.
+- Optimized performance by memoizing `cartItemCount` and `totalPrice` with `React.useMemo`. This prevents these values from being wastefully recalculated on every render.
+- Removed the unused `cartTotal` state variable for cleaner code.
+*/
+
 'use client';
 
 import React, {
   createContext,
   useContext,
   useState,
-  useEffect,
+  useMemo,
   ReactNode,
 } from 'react';
 import { Product } from '../lib/graphql';
@@ -26,7 +32,6 @@ const CartContext = createContext<CartContextType | undefined>(undefined);
 
 export function CartProvider({ children }: { children: ReactNode }) {
   const [cartItems, setCartItems] = useState<CartItem[]>([]);
-  const [cartTotal, setCartTotal] = useState(0);
 
   const addToCart = (product: Product) => {
     setCartItems((prevItems) => {
@@ -53,23 +58,18 @@ export function CartProvider({ children }: { children: ReactNode }) {
     setCartItems([]);
   };
 
-  useEffect(() => {
-    const total = cartItems.reduce(
+  // Memoize cart item count to prevent recalculation on every render
+  const cartItemCount = useMemo(() => {
+    return cartItems.reduce((total, item) => total + item.quantity, 0);
+  }, [cartItems]);
+
+  // Memoize total price to prevent recalculation on every render
+  const totalPrice = useMemo(() => {
+    return cartItems.reduce(
       (sum, item) => sum + item.price * item.quantity,
       0
     );
-    setCartTotal(total);
-  }, []);
-
-  // Recalculating on every render
-  const cartItemCount = cartItems.reduce(
-    (total, item) => total + item.quantity,
-    0
-  );
-  const totalPrice = cartItems.reduce(
-    (total, item) => total + item.price * item.quantity,
-    0
-  );
+  }, [cartItems]);
 
   return (
     <CartContext.Provider

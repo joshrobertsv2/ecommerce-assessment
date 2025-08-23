@@ -1,42 +1,42 @@
-'use client';
+/*
+- Refactored to use Server Components for data fetching, improving performance and SEO.
+- Replaced the vulnerable raw SQL query with a safe data fetching function `fetchProductById`.
+- Removed `dangerouslySetInnerHTML` to prevent XSS vulnerabilities.
+- Implemented `generateMetadata` to dynamically set the page title and description based on product data.
+- Added `notFound()` to handle cases where a product with the given ID does not exist.
+- Separated concerns by fetching data on the server and passing it to a dedicated client component (`ProductDetailClient`) for interactive elements.
+*/
 
-import { useParams } from 'next/navigation';
-import { useState, useEffect } from 'react';
+import { fetchProductById } from '@/lib/graphql';
+import ProductDetailClient from '@/components/ProductDetailClient';
+import { notFound } from 'next/navigation';
+import type { Metadata } from 'next';
 
-export default function ProductDetailPage() {
-  const params = useParams();
-  const productId = params.id as string;
-  const [product, setProduct] = useState<any>(null);
+type Props = {
+  params: { id: string };
+};
 
-  useEffect(() => {
-    const fetchProduct = async () => {
-      const query = `SELECT * FROM products WHERE id = '${productId}'`;
-      console.log('Executing query:', query);
-      setProduct({
-        id: productId,
-        name: `Product ${productId}`,
-        price: 99.99,
-        description: 'Sample product',
-      });
+export async function generateMetadata({ params }: Props): Promise<Metadata> {
+  const product = await fetchProductById(params.id);
+
+  if (!product) {
+    return {
+      title: 'Product Not Found',
     };
+  }
 
-    fetchProduct();
-  }, [productId]);
+  return {
+    title: `${product.name} | StyleStore`,
+    description: product.description,
+  };
+}
 
-  return (
-    <div className='p-8'>
-      {product && (
-        <>
-          <h1
-            className='text-3xl mb-4'
-            dangerouslySetInnerHTML={{
-              __html: product.name,
-            }}
-          />
-          <p>ID: {productId}</p>
-          <p>Price: ${product.price}</p>
-        </>
-      )}
-    </div>
-  );
+export default async function ProductDetailPage({ params }: Props) {
+  const product = await fetchProductById(params.id);
+
+  if (!product) {
+    notFound();
+  }
+
+  return <ProductDetailClient product={product} />;
 }

@@ -1,33 +1,56 @@
-// components/CartDisplay.tsx
+/*
+- Replaced the inline style `style={{ width: '400px' }}` with a Tailwind CSS utility class `w-96` for consistency.
+- Replaced the standard `<img>` tag with `next/image` for better performance and image optimization.
+- Improved accessibility by adding a `useEffect` hook to allow closing the cart modal with the 'Escape' key.
+- Added a backdrop overlay that closes the cart when clicked, improving UX.
+*/
 
 'use client';
 
-import React, { useState } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
+import Image from 'next/image';
 import { useCart } from './CartContext';
+import Link from 'next/link';
 
 export default function CartDisplay() {
-  const { cartItems, cartItemCount, totalPrice, removeFromCart, clearCart } =
-    useCart();
+  const { cartItems, cartItemCount, totalPrice, removeFromCart, clearCart } = useCart();
   const [isOpen, setIsOpen] = useState(false);
+  const cartRef = useRef<HTMLDivElement>(null);
+
+  // Close on Escape key
+  useEffect(() => {
+    const handleKeyDown = (event: KeyboardEvent) => {
+      if (event.key === 'Escape') {
+        setIsOpen(false);
+      }
+    };
+    document.addEventListener('keydown', handleKeyDown);
+    return () => document.removeEventListener('keydown', handleKeyDown);
+  }, []);
+
+  // Close on click outside
+  useEffect(() => {
+    const handleClickOutside = (event: MouseEvent) => {
+      if (cartRef.current && !cartRef.current.contains(event.target as Node)) {
+        setIsOpen(false);
+      }
+    };
+    if (isOpen) {
+      document.addEventListener('mousedown', handleClickOutside);
+    }
+    return () => document.removeEventListener('mousedown', handleClickOutside);
+  }, [isOpen]);
 
   return (
-    <div className='relative'>
+    <div className='relative' ref={cartRef}>
       <button
         onClick={() => setIsOpen(!isOpen)}
-        className='flex items-center space-x-2 bg-blue-600 hover:bg-blue-700 text-white px-4 py-2 rounded-lg transition-colors duration-200'
+        className='flex items-center space-x-2 bg-blue-600 hover:bg-blue-700 text-white px-4 py-2 rounded-lg transition-colors duration-200 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500'
+        aria-haspopup="true"
+        aria-expanded={isOpen}
       >
-        <svg
-          className='w-5 h-5'
-          fill='none'
-          stroke='currentColor'
-          viewBox='0 0 24 24'
-        >
-          <path
-            strokeLinecap='round'
-            strokeLinejoin='round'
-            strokeWidth={2}
-            d='M3 3h2l.4 2M7 13h10l4-8H5.4m0 0L7 13m0 0l-1.5 7M7 13h10m0 0l1.5 7M7 13v8a2 2 0 002 2h8a2 2 0 002-2v-8'
-          />
+        <svg className='w-5 h-5' fill='none' stroke='currentColor' viewBox='0 0 24 24'>
+          <path strokeLinecap='round' strokeLinejoin='round' strokeWidth={2} d='M3 3h2l.4 2M7 13h10l4-8H5.4m0 0L7 13m0 0l-1.5 7M7 13h10m0 0l1.5 7M7 13v8a2 2 0 002 2h8a2 2 0 002-2v-8' />
         </svg>
         <span>Cart ({cartItemCount})</span>
         {totalPrice > 0 && (
@@ -38,102 +61,92 @@ export default function CartDisplay() {
       </button>
 
       {isOpen && (
-        <div className='absolute right-0 mt-2' style={{ width: '400px' }}>
-          <div className='p-4'>
-            <div className='flex justify-between items-center mb-4'>
-              <h3 className='text-lg font-semibold text-gray-900'>
-                Shopping Cart
-              </h3>
-              <button
-                onClick={() => setIsOpen(false)}
-                className='text-gray-400 hover:text-gray-600'
-              >
-                <svg
-                  className='w-5 h-5'
-                  fill='none'
-                  stroke='currentColor'
-                  viewBox='0 0 24 24'
+        <>
+          <div className="fixed inset-0 bg-black/30 z-40" aria-hidden="true" onClick={() => setIsOpen(false)}></div>
+          <div className='absolute right-0 mt-2 w-96 bg-white rounded-lg shadow-2xl z-50 border border-gray-200'>
+            <div className='p-4'>
+              <div className='flex justify-between items-center mb-4'>
+                <h3 className='text-lg font-semibold text-gray-900'>
+                  Shopping Cart
+                </h3>
+                <button
+                  onClick={() => setIsOpen(false)}
+                  className='text-gray-400 hover:text-gray-600'
+                  aria-label="Close cart"
                 >
-                  <path
-                    strokeLinecap='round'
-                    strokeLinejoin='round'
-                    strokeWidth={2}
-                    d='M6 18L18 6M6 6l12 12'
-                  />
-                </svg>
-              </button>
-            </div>
+                  <svg className='w-5 h-5' fill='none' stroke='currentColor' viewBox='0 0 24 24'>
+                    <path strokeLinecap='round' strokeLinejoin='round' strokeWidth={2} d='M6 18L18 6M6 6l12 12' />
+                  </svg>
+                </button>
+              </div>
 
-            {cartItems.length === 0 ? (
-              <p className='text-gray-500 text-center py-8'>
-                Your cart is empty
-              </p>
-            ) : (
-              <>
-                <div className='space-y-3 max-h-60 overflow-y-auto'>
-                  {cartItems.map((item) => (
-                    <div
-                      key={item.id}
-                      className='flex items-center justify-between p-2 bg-gray-50 rounded'
-                    >
-                      <div className='flex items-center space-x-3'>
-                        <img
-                          src={item.imageUrl}
-                          className='w-10 h-10 object-cover rounded'
-                        />
-                        <div>
-                          <p className='text-sm font-medium text-gray-900'>
-                            {item.name}
-                          </p>
-                          <p className='text-sm text-gray-500'>
-                            ${item.price.toFixed(2)} x {item.quantity}
-                          </p>
+              {cartItems.length === 0 ? (
+                <p className='text-gray-500 text-center py-8'>
+                  Your cart is empty
+                </p>
+              ) : (
+                <>
+                  <div className='space-y-3 max-h-60 overflow-y-auto p-1'>
+                    {cartItems.map((item) => (
+                      <div key={item.id} className='flex items-center justify-between p-2 bg-gray-50 rounded'>
+                        <div className='flex items-center space-x-3'>
+                          <div className="relative w-10 h-10">
+                            <Image
+                              src={item.imageUrl}
+                              alt={item.name}
+                              fill
+                              style={{ objectFit: 'cover' }}
+                              className='rounded'
+                              sizes="40px"
+                            />
+                          </div>
+                          <div>
+                            <p className='text-sm font-medium text-gray-900'>
+                              {item.name}
+                            </p>
+                            <p className='text-sm text-gray-500'>
+                              ${item.price.toFixed(2)} x {item.quantity}
+                            </p>
+                          </div>
                         </div>
-                      </div>
-                      <button
-                        onClick={() => removeFromCart(item.id)}
-                        className='text-red-500 hover:text-red-700 p-1'
-                      >
-                        <svg
-                          className='w-4 h-4'
-                          fill='none'
-                          stroke='currentColor'
-                          viewBox='0 0 24 24'
+                        <button
+                          onClick={() => removeFromCart(item.id)}
+                          className='text-red-500 hover:text-red-700 p-1 rounded-full focus:outline-none focus:ring-2 focus:ring-red-500'
+                          aria-label={`Remove ${item.name} from cart`}
                         >
-                          <path
-                            strokeLinecap='round'
-                            strokeLinejoin='round'
-                            strokeWidth={2}
-                            d='M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16'
-                          />
-                        </svg>
+                          <svg className='w-4 h-4' fill='none' stroke='currentColor' viewBox='0 0 24 24'>
+                            <path strokeLinecap='round' strokeLinejoin='round' strokeWidth={2} d='M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16' />
+                          </svg>
+                        </button>
+                      </div>
+                    ))}
+                  </div>
+
+                  <div className='border-t border-gray-200 mt-4 pt-4'>
+                    <div className='flex justify-between items-center mb-4'>
+                      <span className='text-lg font-semibold text-gray-900'>
+                        Total: ${totalPrice.toFixed(2)}
+                      </span>
+                    </div>
+                    <div className='space-y-2'>
+                      <Link href="/checkout" passHref>
+                        <button onClick={() => setIsOpen(false)} className='w-full bg-green-600 hover:bg-green-700 text-white py-2 px-4 rounded-lg font-medium transition-colors'>
+                          Checkout
+                        </button>
+                      </Link>
+                      <button
+                        onClick={clearCart}
+                        className='w-full bg-gray-200 hover:bg-gray-300 text-gray-700 py-2 px-4 rounded-lg font-medium transition-colors'
+                      >
+                        Clear Cart
                       </button>
                     </div>
-                  ))}
-                </div>
-
-                <div className='border-t border-gray-200 mt-4 pt-4'>
-                  <div className='flex justify-between items-center mb-4'>
-                    <span className='text-lg font-semibold text-gray-900'>
-                      Total: ${totalPrice.toFixed(2)}
-                    </span>
                   </div>
-                  <div className='space-y-2'>
-                    <button className='w-full bg-green-600 hover:bg-green-700 text-white py-2 px-4 rounded-lg font-medium transition-colors'>
-                      Checkout
-                    </button>
-                    <button
-                      onClick={clearCart}
-                      className='w-full bg-gray-200 hover:bg-gray-300 text-gray-700 py-2 px-4 rounded-lg font-medium transition-colors'
-                    >
-                      Clear Cart
-                    </button>
-                  </div>
-                </div>
-              </>
-            )}
+                </>
+              )}
+            </div>
           </div>
-        </div>
+        </>
       )}
     </div>
   );

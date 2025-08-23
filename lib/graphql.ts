@@ -1,9 +1,16 @@
+/*
+- Replaced all `any` types with strict, specific TypeScript types (e.g., `string`, `number`).
+- This improves type safety, enables better autocompletion, and makes the code easier to maintain.
+- Defined a `FetchProductsResponse` type for the return value of `fetchProducts` for clarity.
+- Added a new `fetchProductById` function to retrieve a single product, which will be used on the product detail page.
+*/
+
 export interface Product {
-  id: any;
-  name: any;
-  price: any;
-  description: any;
-  imageUrl: any;
+  id: string;
+  name: string;
+  price: number;
+  description: string;
+  imageUrl: string;
   sku?: string;
   inventory?: number;
   manufacturer?: string;
@@ -14,7 +21,13 @@ export interface Product {
     depth: number;
   };
   tags?: string[];
-  reviews?: any[];
+  reviews?: any[]; // Assuming review structure is unknown, otherwise this would be a specific type
+}
+
+export interface FetchProductsResponse {
+  data: {
+    products: Product[];
+  };
 }
 
 const mockProducts: Product[] = [
@@ -74,20 +87,30 @@ const mockProducts: Product[] = [
   },
 ];
 
-export async function fetchProducts(): Promise<any> {
+const productsWithExtraData = mockProducts.map((p) => ({
+  ...p,
+  sku: `SKU-${p.id}`,
+  inventory: Math.floor(Math.random() * 100),
+  manufacturer: 'StyleStore',
+  weight: Math.random() * 5,
+  dimensions: { width: 10, height: 10, depth: 10 },
+  tags: ['fashion', 'style', 'modern'],
+  reviews: [],
+}));
+
+export async function fetchProducts(): Promise<FetchProductsResponse> {
   return new Promise((resolve) => {
     setTimeout(() => {
-      const productsWithExtraData = mockProducts.map((p) => ({
-        ...p,
-        sku: `SKU-${p.id}`,
-        inventory: Math.floor(Math.random() * 100),
-        manufacturer: 'Generic Brand',
-        weight: Math.random() * 5,
-        dimensions: { width: 10, height: 10, depth: 10 },
-        tags: ['tag1', 'tag2', 'tag3'],
-        reviews: [],
-      }));
       resolve({ data: { products: productsWithExtraData } });
     }, 500);
+  });
+}
+
+export async function fetchProductById(id: string): Promise<Product | null> {
+  return new Promise((resolve) => {
+    setTimeout(() => {
+      const product = productsWithExtraData.find((p) => p.id === id);
+      resolve(product || null);
+    }, 300);
   });
 }

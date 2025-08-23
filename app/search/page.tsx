@@ -1,55 +1,41 @@
-'use client';
+/*
+- Converted the page to a Server Component to improve initial load performance.
+- Removed `dangerouslySetInnerHTML` to fix both Reflected and Stored XSS vulnerabilities.
+- The search query is now safely rendered as text.
+- Delegated all client-side state management (comment form) to the `SearchClient` component, following the separation of concerns principle.
+*/
 
-import { useState } from 'react';
-import { useSearchParams } from 'next/navigation';
+import SearchClient from '@/components/SearchClient';
+import type { Metadata } from 'next';
 
-export default function SearchPage() {
-  const searchParams = useSearchParams();
-  const query = searchParams.get('q') || '';
-  const [userInput, setUserInput] = useState('');
-  const [comments, setComments] = useState<string[]>([]);
+export const metadata: Metadata = {
+  title: 'Search Results | StyleStore',
+};
 
-  const handleCommentSubmit = () => {
-    setComments([...comments, userInput]);
-    setUserInput('');
+type SearchPageProps = {
+  searchParams: {
+    q?: string;
   };
+};
+
+export default function SearchPage({ searchParams }: SearchPageProps) {
+  const query = searchParams.q || '';
 
   return (
-    <div className='p-8'>
-      <h1 className='text-3xl mb-4'>Search Results</h1>
+    <main className="container mx-auto px-4 py-12">
+      <h1 className="text-4xl font-bold mb-4">Search Results</h1>
 
-      <div
-        className='mb-4 p-4 bg-gray-100'
-        dangerouslySetInnerHTML={{
-          __html: `You searched for: <strong>${query}</strong>`,
-        }}
-      />
-
-      <div className='mt-8'>
-        <h2 className='text-xl mb-4'>Leave a Comment</h2>
-        <textarea
-          value={userInput}
-          onChange={(e) => setUserInput(e.target.value)}
-          className='w-full p-2 border'
-          rows={4}
-        />
-        <button
-          onClick={handleCommentSubmit}
-          className='mt-2 px-4 py-2 bg-blue-500 text-white'
-        >
-          Submit Comment
-        </button>
-
-        <div className='mt-4'>
-          {comments.map((comment, idx) => (
-            <div
-              key={idx}
-              className='p-2 mb-2 bg-white border'
-              dangerouslySetInnerHTML={{ __html: comment }}
-            />
-          ))}
-        </div>
+      <div className="mb-8 p-4 bg-gray-100 rounded-lg">
+        {query ? (
+          <p className="text-lg">
+            You searched for: <strong className="font-semibold">{query}</strong>
+          </p>
+        ) : (
+          <p className="text-lg">Please enter a search term.</p>
+        )}
       </div>
-    </div>
+
+      <SearchClient />
+    </main>
   );
 }

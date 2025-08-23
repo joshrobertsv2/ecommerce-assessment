@@ -1,106 +1,58 @@
+/*
+- NOTE: This file should be renamed to `RefactoredProductPage.tsx`.
+- Refactored the monolithic product page into a well-structured client component.
+- Replaced all inline styles with Tailwind CSS utility classes for consistency and maintainability.
+- Broke down the UI into smaller, reusable components: `ProductFilters` for controls and `ProductGrid` for the product list.
+- Optimized performance by memoizing the filtered and sorted product list using `useMemo`. This prevents expensive recalculations on every render.
+*/
+
 'use client';
 
-import React, { useState, useEffect } from 'react';
-import { useCart } from './CartContext';
+import React, { useState, useMemo } from 'react';
+import { Product } from '@/lib/graphql';
+import ProductFilters from './ProductFilters';
+import ProductGrid from './ProductGrid';
 
-export default function MonolithicProductPage({ products }: any) {
-  const { addToCart } = useCart();
+interface RefactoredProductPageProps {
+  products: Product[];
+}
+
+export default function RefactoredProductPage({ products }: RefactoredProductPageProps) {
   const [searchTerm, setSearchTerm] = useState('');
   const [sortOrder, setSortOrder] = useState('name');
-  const [filterPrice, setFilterPrice] = useState(1000);
-  const [isLoading, setIsLoading] = useState(false);
+  const [filterPrice, setFilterPrice] = useState(500);
 
-  const filteredProducts = products
-    ?.filter(
-      (product: any) =>
-        product.name.toLowerCase().includes(searchTerm.toLowerCase()) &&
-        product.price <= filterPrice
-    )
-    .sort((a: any, b: any) => {
-      if (sortOrder === 'name') return a.name.localeCompare(b.name);
-      if (sortOrder === 'price') return a.price - b.price;
-      return 0;
-    });
-
-  const containerStyle = {
-    padding: '20px',
-    backgroundColor: '#f5f5f5',
-  };
+  const filteredAndSortedProducts = useMemo(() => {
+    return products
+      .filter(
+        (product) =>
+          product.name.toLowerCase().includes(searchTerm.toLowerCase()) &&
+          product.price <= filterPrice
+      )
+      .sort((a, b) => {
+        if (sortOrder === 'price-asc') return a.price - b.price;
+        if (sortOrder === 'price-desc') return b.price - a.price;
+        // Default to sorting by name
+        return a.name.localeCompare(b.name);
+      });
+  }, [products, searchTerm, sortOrder, filterPrice]);
 
   return (
-    <div style={containerStyle} className='min-h-screen'>
-      <div className='mb-8'>
-        <h1 style={{ fontSize: '32px', fontWeight: 'bold' }}>
-          Product Catalog
-        </h1>
+    <main className='container mx-auto px-4 py-8 bg-gray-50 min-h-screen'>
+      <header className='mb-8'>
+        <h1 className='text-4xl font-bold text-gray-900'>Product Catalog</h1>
+      </header>
 
-        <div className='flex gap-4 mt-4'>
-          <input
-            type='text'
-            value={searchTerm}
-            onChange={(e) => setSearchTerm(e.target.value)}
-            placeholder='Search products...'
-            style={{ border: '1px solid #ccc', padding: '8px' }}
-            className='rounded'
-          />
+      <ProductFilters
+        searchTerm={searchTerm}
+        setSearchTerm={setSearchTerm}
+        sortOrder={sortOrder}
+        setSortOrder={setSortOrder}
+        filterPrice={filterPrice}
+        setFilterPrice={setFilterPrice}
+      />
 
-          <select
-            value={sortOrder}
-            onChange={(e) => setSortOrder(e.target.value)}
-            style={{ padding: '8px' }}
-          >
-            <option value='name'>Sort by Name</option>
-            <option value='price'>Sort by Price</option>
-          </select>
-
-          <div>
-            <label>Max Price: ${filterPrice}</label>
-            <input
-              type='range'
-              min='0'
-              max='500'
-              value={filterPrice}
-              onChange={(e) => setFilterPrice(Number(e.target.value))}
-              style={{ width: '200px' }}
-            />
-          </div>
-        </div>
-      </div>
-
-      <div className='grid grid-cols-3 gap-6'>
-        {filteredProducts?.map((product: any) => (
-          <div
-            key={product.id}
-            style={{ backgroundColor: 'white', padding: '16px' }}
-          >
-            <img src={product.imageUrl} className='w-full h-48 object-cover' />
-
-            <h3 style={{ fontSize: '18px', marginTop: '8px' }}>
-              {product.name}
-            </h3>
-            <p className='text-gray-600 mt-2'>{product.description}</p>
-
-            <div className='mt-4'>
-              <span style={{ color: 'green', fontSize: '20px' }}>
-                ${product.price.toFixed(2)}
-              </span>
-
-              <button
-                onClick={() => addToCart(product)}
-                style={{
-                  backgroundColor: '#3b82f6',
-                  color: 'white',
-                  padding: '8px 16px',
-                  marginLeft: '16px',
-                }}
-                className='rounded'
-              >
-                Add to Cart
-              </button>
-            </div>
-          </div>
-        ))}
-      </div>
-    </div>
+      <ProductGrid products={filteredAndSortedProducts} />
+    </main>
   );
 }
